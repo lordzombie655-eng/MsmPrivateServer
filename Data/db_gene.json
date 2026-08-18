@@ -1,0 +1,222 @@
+{
+  "server_time": 1776719927233,
+  "genes_data": [
+    {
+      "gene_graphic": "gene_air",
+      "gene_id": 1,
+      "gene_letter": "A",
+      "gene_string": "GENE_A_LABEL",
+      "last_changed": 1696250783000,
+      "min_server_version": "1.0",
+      "sort_order": 1
+    },
+    {
+      "gene_graphic": "gene_plant",
+      "gene_id": 2,
+      "gene_letter": "B",
+      "gene_string": "GENE_B_LABEL",
+      "last_changed": 1696250784000,
+      "min_server_version": "1.0",
+      "sort_order": 2
+    },
+    {
+      "gene_graphic": "gene_earth",
+      "gene_id": 3,
+      "gene_letter": "C",
+      "gene_string": "GENE_C_LABEL",
+      "last_changed": 1696250784000,
+      "min_server_version": "1.0",
+      "sort_order": 3
+    },
+    {
+      "gene_graphic": "gene_water",
+      "gene_id": 4,
+      "gene_letter": "D",
+      "gene_string": "GENE_D_LABEL",
+      "last_changed": 1696250784000,
+      "min_server_version": "1.0",
+      "sort_order": 4
+    },
+    {
+      "gene_graphic": "gene_cold",
+      "gene_id": 5,
+      "gene_letter": "E",
+      "gene_string": "GENE_E_LABEL",
+      "last_changed": 1696250784000,
+      "min_server_version": "1.0",
+      "sort_order": 5
+    },
+    {
+      "gene_graphic": "gene_electricity",
+      "gene_id": 6,
+      "gene_letter": "F",
+      "gene_string": "GENE_F_LABEL",
+      "last_changed": 1696250784000,
+      "min_server_version": "2.0",
+      "sort_order": 22
+    },
+    {
+      "gene_graphic": "gene_electricity",
+      "gene_id": 7,
+      "gene_letter": "U",
+      "gene_string": "GENE_U_LABEL",
+      "last_changed": 1696250784000,
+      "min_server_version": "2.0",
+      "sort_order": 21
+    },
+    {
+      "gene_graphic": "gene_ecto_plasma",
+      "gene_id": 8,
+      "gene_letter": "G",
+      "gene_string": "GENE_G_LABEL",
+      "last_changed": 1696250784000,
+      "min_server_version": "2.0",
+      "sort_order": 11
+    },
+    {
+      "gene_graphic": "gene_mech",
+      "gene_id": 9,
+      "gene_letter": "K",
+      "gene_string": "GENE_K_LABEL",
+      "last_changed": 1696250784000,
+      "min_server_version": "2.0",
+      "sort_order": 13
+    },
+    {
+      "gene_graphic": "gene_legendary",
+      "gene_id": 10,
+      "gene_letter": "Z",
+      "gene_string": "GENE_Z_LABEL",
+      "last_changed": 1696250784000,
+      "min_server_version": "2.0",
+      "sort_order": 18
+    },
+    {
+      "gene_graphic": "gene_shadow",
+      "gene_id": 11,
+      "gene_letter": "J",
+      "gene_string": "GENE_J_LABEL",
+      "last_changed": 1696250784000,
+      "min_server_version": "2.0",
+      "sort_order": 12
+    },
+    {
+      "gene_graphic": "gene_crystal",
+      "gene_id": 12,
+      "gene_letter": "L",
+      "gene_string": "GENE_L_LABEL",
+      "last_changed": 1696250784000,
+      "min_server_version": "2.0",
+      "sort_order": 14
+    },
+    {
+      "gene_graphic": "gene_toxic",
+      "gene_id": 13,
+      "gene_letter": "M",
+      "gene_string": "GENE_M_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "3.1",
+      "sort_order": 15
+    },
+    {
+      "gene_graphic": "gene_fire",
+      "gene_id": 14,
+      "gene_letter": "N",
+      "gene_string": "GENE_N_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "4.0",
+      "sort_order": 6
+    },
+    {
+      "gene_graphic": "gene_legendary",
+      "gene_id": 15,
+      "gene_letter": "O",
+      "gene_string": "GENE_O_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "5.3",
+      "sort_order": 19
+    },
+    {
+      "gene_graphic": "gene_dipster",
+      "gene_id": 16,
+      "gene_letter": "Q",
+      "gene_string": "GENE_Q_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "4.2",
+      "sort_order": 20
+    },
+    {
+      "gene_graphic": "gene_celestial",
+      "gene_id": 17,
+      "gene_letter": "T",
+      "gene_string": "GENE_T_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "5.3",
+      "sort_order": 23
+    },
+    {
+      "gene_graphic": "gene_mythical",
+      "gene_id": 18,
+      "gene_letter": "P",
+      "gene_string": "GENE_P_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "6.1",
+      "sort_order": 17
+    },
+    {
+      "gene_graphic": "gene_psychic",
+      "gene_id": 19,
+      "gene_letter": "R",
+      "gene_string": "GENE_R_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "6.1",
+      "sort_order": 7
+    },
+    {
+      "gene_graphic": "gene_fairy",
+      "gene_id": 20,
+      "gene_letter": "Y",
+      "gene_string": "GENE_Y_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "6.4",
+      "sort_order": 10
+    },
+    {
+      "gene_graphic": "gene_bone",
+      "gene_id": 21,
+      "gene_letter": "V",
+      "gene_string": "GENE_V_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "6.6",
+      "sort_order": 8
+    },
+    {
+      "gene_graphic": "gene_light",
+      "gene_id": 22,
+      "gene_letter": "W",
+      "gene_string": "GENE_W_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "6.9",
+      "sort_order": 9
+    },
+    {
+      "gene_graphic": "gene_dream",
+      "gene_id": 23,
+      "gene_letter": "H",
+      "gene_string": "GENE_H_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "8.1",
+      "sort_order": 16
+    },
+    {
+      "gene_graphic": "gene_paironormal",
+      "gene_id": 24,
+      "gene_letter": "I",
+      "gene_string": "GENE_I_LABEL",
+      "last_changed": 1733156051000,
+      "min_server_version": "10.3",
+      "sort_order": 24
+    }
+  ],
+  "last_updated": 1733156051000
+}

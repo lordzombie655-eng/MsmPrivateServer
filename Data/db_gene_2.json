@@ -1,0 +1,116 @@
+{
+  "server_time": 0,
+  "last_updated": 1733156051000,
+  "chunk": 2,
+  "numChunks": 2,
+  "genes_data": [
+    {
+      "gene_graphic": "gene_toxic",
+      "gene_id": 13,
+      "gene_letter": "M",
+      "gene_string": "GENE_M_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "3.1",
+      "sort_order": 15
+    },
+    {
+      "gene_graphic": "gene_fire",
+      "gene_id": 14,
+      "gene_letter": "N",
+      "gene_string": "GENE_N_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "4.0",
+      "sort_order": 6
+    },
+    {
+      "gene_graphic": "gene_legendary",
+      "gene_id": 15,
+      "gene_letter": "O",
+      "gene_string": "GENE_O_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "5.3",
+      "sort_order": 19
+    },
+    {
+      "gene_graphic": "gene_dipster",
+      "gene_id": 16,
+      "gene_letter": "Q",
+      "gene_string": "GENE_Q_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "4.2",
+      "sort_order": 20
+    },
+    {
+      "gene_graphic": "gene_celestial",
+      "gene_id": 17,
+      "gene_letter": "T",
+      "gene_string": "GENE_T_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "5.3",
+      "sort_order": 23
+    },
+    {
+      "gene_graphic": "gene_mythical",
+      "gene_id": 18,
+      "gene_letter": "P",
+      "gene_string": "GENE_P_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "6.1",
+      "sort_order": 17
+    },
+    {
+      "gene_graphic": "gene_psychic",
+      "gene_id": 19,
+      "gene_letter": "R",
+      "gene_string": "GENE_R_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "6.1",
+      "sort_order": 7
+    },
+    {
+      "gene_graphic": "gene_fairy",
+      "gene_id": 20,
+      "gene_letter": "Y",
+      "gene_string": "GENE_Y_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "6.4",
+      "sort_order": 10
+    },
+    {
+      "gene_graphic": "gene_bone",
+      "gene_id": 21,
+      "gene_letter": "V",
+      "gene_string": "GENE_V_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "6.6",
+      "sort_order": 8
+    },
+    {
+      "gene_graphic": "gene_light",
+      "gene_id": 22,
+      "gene_letter": "W",
+      "gene_string": "GENE_W_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "6.9",
+      "sort_order": 9
+    },
+    {
+      "gene_graphic": "gene_dream",
+      "gene_id": 23,
+      "gene_letter": "H",
+      "gene_string": "GENE_H_LABEL",
+      "last_changed": 1696250785000,
+      "min_server_version": "8.1",
+      "sort_order": 16
+    },
+    {
+      "gene_graphic": "gene_paironormal",
+      "gene_id": 24,
+      "gene_letter": "I",
+      "gene_string": "GENE_I_LABEL",
+      "last_changed": 1733156051000,
+      "min_server_version": "10.3",
+      "sort_order": 24
+    }
+  ]
+}

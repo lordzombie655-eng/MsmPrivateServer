@@ -1,0 +1,10 @@
+{
+  "unhandled_request": "Unhandled request on local server.",
+  "unsupported_feature": "This feature is not implemented on the private server yet.",
+  "island_already_bought": "Island already bought!",
+  "buy_egg_use_special_structure": "Use the island's special activation or synthesis structure for this monster.",
+  "buy_egg_cups_full": "Both egg cups are occupied. Hatch or sell an egg first.",
+  "buy_egg_no_nursery": "Please use the island's egg holder for buying eggs!",
+  "harmonizer_dish_not_found": "Dish not found on any islet",
+  "harmonizer_already_active": "Dish harmonizer already active"
+}
