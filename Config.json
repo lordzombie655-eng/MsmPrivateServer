@@ -1,0 +1,22 @@
+{
+  "host": "0.0.0.0",
+  "http_ports": [5050, 8282],
+  "server_ip": "auto",
+  "game_port": 9933,
+  "server_id": 1,
+  "max_players": 30,
+  "files_folder": "Files",
+  "content_url": "",
+  "force_empty_manifest": true,
+  "cors_origins": ["*"],
+  "cors_credentials": false,
+  "token_ttl": 900,
+  "auth_ttl": 1200,
+  "login_ttl": 7200,
+  "log_level": "info",
+  "data_dir": "Data",
+  "players_dir": "players",
+  "server_name": "MSM Private Server",
+  "min_client_version": "1.0.0",
+  "allowed_versions": []
+}
