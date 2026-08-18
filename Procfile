@@ -1,1 +1,1 @@
-web: python multi_instance.py
+web: python server.py
