@@ -1,85 +1,116 @@
-# MSM Private Server (reorganizado)
+# MSM Private Server — Railway + optimizado
 
-Servidor privado para **My Singing Monsters**.
+Servidor privado de **My Singing Monsters**, optimizado para muchas conexiones y listo para **Railway**.
+
+## Características
+
+- **1 solo puerto fijo** (por defecto `9933`; en Railway usa el `$PORT` automático)
+- **Hasta 500 jugadores** por defecto (`max_players`, configurable)
+- Preload de todos los JSON de `Data/` en memoria al arrancar
+- Caché de jugadores en memoria
+- `orjson` + `uvloop` cuando están disponibles
+- Logging reducido (solo warning) para no saturar bajo carga
+- Uvicorn con `limit_concurrency=2000` y backlog alto
+
+---
+
+## Desplegar en Railway (recomendado)
+
+### 1. Sube el código
+
+Opción A — desde GitHub:
+1. Crea un repo y sube **todo** el contenido de esta carpeta (`server.py`, `Data/`, `requirements.txt`, etc.).
+2. En [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo**.
+
+Opción B — CLI:
+```bash
+npm i -g @railway/cli
+railway login
+railway init
+railway up
+```
+
+### 2. Configuración en Railway
+
+Railway asigna el puerto con la variable **`PORT`**. El servidor la detecta solo y escucha ahí (un solo puerto).
+
+Variables opcionales (Settings → Variables):
+
+| Variable        | Descripción                     | Ejemplo        |
+|-----------------|---------------------------------|----------------|
+| `MAX_PLAYERS`   | Límite de conexiones simultáneas| `500`          |
+| `LOG_LEVEL`     | `warning` / `info` / `debug`    | `warning`      |
+| `SERVER_ID`     | ID del servidor                 | `1`            |
+| `SERVER_NAME`   | Nombre visible                  | `Mi MSM`       |
+| `PUBLIC_HOST`   | Dominio público (sin https://)  | `xxx.up.railway.app` |
+
+### 3. Generar dominio público
+
+En el servicio → **Settings** → **Networking** → **Generate Domain**.
+
+Copia el dominio (ej: `msm-production-xxxx.up.railway.app`).
+
+### 4. Cliente / APK
+
+El cliente debe apuntar al dominio de Railway (HTTP + WebSocket en el mismo host/puerto que Railway expone).  
+Railway termina TLS en el edge; el contenedor recibe HTTP en `$PORT`.
+
+---
+
+## Ejecutar en local
+
+```bash
+pip install -r requirements.txt
+python server.py
+```
+
+Puerto fijo por defecto: **9933**.
+
+Cambia en `Config.json`:
+```json
+{
+  "port": 9933,
+  "http_ports": [9933],
+  "game_port": 9933,
+  "max_players": 500,
+  "log_level": "warning"
+}
+```
+
+---
+
+## Optimizaciones aplicadas
+
+1. **Un solo puerto** — más simple y compatible con Railway.
+2. **Preload de DB** — todos los JSON de `Data/` en RAM al inicio.
+3. **Caché de jugadores** — menos lecturas de disco.
+4. **orjson** — serialización JSON más rápida.
+5. **uvloop** — event loop más rápido (Linux).
+6. **Logging en warning** — menos I/O bajo carga.
+7. **limit_concurrency=2000** + backlog alto en Uvicorn.
+8. **max_players=500** por defecto (sube o baja con la variable `MAX_PLAYERS`).
+
+Si necesitas aún más capacidad: sube el plan de Railway (más RAM/CPU) y aumenta `MAX_PLAYERS`.
+
+---
 
 ## Estructura
 
 ```
-msm_reorg/
-├── Config.json          # Configuración del servidor (editable)
-├── Data/                # TODOS los JSON del juego (datos)
-├── players/             # Datos de jugadores (se crea solo)
-├── server.py            # Script principal (ejecutar este)
-├── multi_instance.py    # Lanza varias instancias (versiones/servidores)
-├── msm_*.py             # Módulos internos del juego
-└── protocol / handlers / store etc. (módulos de soporte)
+├── server.py           # Entrada principal
+├── Config.json         # Config local
+├── requirements.txt    # Dependencias
+├── Procfile            # Railway start
+├── railway.toml
+├── Data/               # Todos los JSON del juego
+├── players/            # Datos de jugadores
+└── msm_*.py            # Módulos del juego
 ```
-
-Hay **más de 4 scripts Python** porque el juego tiene mucha lógica (monstruos, islas, structures, etc.).  
-Los que importan al usuario son:
-
-1. `server.py`          → servidor principal
-2. `multi_instance.py`  → varias versiones/servidores a la vez
-3. Los módulos `msm_*.py` (internos, no hace falta tocarlos)
-4. `Config.json`        → configuración
-
-Todos los **JSON de datos** están en la carpeta **`Data/`**.
 
 ## Requisitos
 
-```bash
-pip install fastapi uvicorn pycryptodome
+Python 3.10+
+
 ```
-
-## Uso rápido (1 servidor)
-
-```bash
-cd msm_reorg
-python server.py
+fastapi, uvicorn[standard], websockets, pycryptodome, orjson, uvloop
 ```
-
-Edita `Config.json` para cambiar:
-
-| Clave            | Descripción                          | Ejemplo    |
-|------------------|--------------------------------------|------------|
-| `host`           | IP de escucha                        | `0.0.0.0`  |
-| `http_ports`     | Puertos HTTP                         | `[5050]`   |
-| `server_id`      | ID del servidor                      | `1`        |
-| `max_players`    | Límite de personas conectadas        | `30`       |
-| `data_dir`       | Carpeta de los JSON                  | `Data`     |
-| `players_dir`    | Carpeta de partidas de jugadores     | `players`  |
-| `log_level`      | info / debug / warning               | `info`     |
-| `server_name`    | Nombre del servidor                  | `...`      |
-
-`max_players = 0` o quitar la clave = sin límite.
-
-## Varias versiones / varios servidores a la vez
-
-Cada instancia actúa como **otro servidor** (puertos y `server_id` distintos, jugadores separados).
-
-```bash
-python multi_instance.py
-```
-
-Por defecto arranca 4 instancias:
-
-| Nombre     | Puerto HTTP | server_id | max_players | Carpeta jugadores     |
-|------------|-------------|-----------|-------------|-----------------------|
-| MSM_Main   | 5050        | 1         | 30          | players/main          |
-| MSM_Alt1   | 5051        | 2         | 15          | players/alt1          |
-| MSM_Alt2   | 5052        | 3         | 10          | players/alt2          |
-| MSM_Test   | 5053        | 4         | 5           | players/test          |
-
-Puedes editar la lista `INSTANCES` dentro de `multi_instance.py` para añadir/quitar versiones o cambiar límites.
-
-Los datos del juego (`Data/`) se comparten; los jugadores de cada instancia están separados.
-
-## Notas
-
-- El cliente debe apuntar al host/puerto de la instancia que quieras usar.
-- `server_id` diferente hace que el cliente lo trate como servidor distinto.
-- Para datos específicos por versión (si algún día quieres JSON distintos), cambia `data_dir` en la config de esa instancia a otra carpeta.
-
-## Créditos
-
-Basado en Next Private Server.

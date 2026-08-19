@@ -69,18 +69,25 @@ def save_json(path, data):
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding='utf-8')
 
 def lan_ip():
-    return '127.0.0.1'
+    """Best-effort public / bind host for Railway and local."""
+    for key in ("PUBLIC_HOST", "RAILWAY_PUBLIC_DOMAIN", "RAILWAY_STATIC_URL"):
+        v = os.environ.get(key)
+        if v:
+            return v.replace("https://", "").replace("http://", "").split("/")[0]
+    # Railway internal hostname not useful for clients; prefer localhost fallback
+    return "127.0.0.1"
 
 def config():
     _b = read_json(CONFIG_PATH, {})
     _a = False
     _c = {
         'host': '0.0.0.0',
-        'http_ports': [5050, 8282],
+        'port': 9933,
+        'http_ports': [9933],
         'server_ip': 'auto',
         'game_port': 9933,
         'server_id': 1,
-        'max_players': 30,
+        'max_players': 500,
         'files_folder': 'Files',
         'content_url': '',
         'force_empty_manifest': True,
@@ -89,10 +96,11 @@ def config():
         'token_ttl': 900,
         'auth_ttl': 1200,
         'login_ttl': 7200,
-        'log_level': 'info',
+        'log_level': 'warning',
         'data_dir': 'Data',
         'players_dir': 'players',
         'server_name': 'MSM Private Server',
+        'preload_db': True,
     }
     for _d, _e in _c.items():
         if _d not in _b:
@@ -110,6 +118,42 @@ def config():
         save_json(CONFIG_PATH, _b)
     return _b
 SETTINGS = config()
+
+# Railway / cloud: single port from $PORT (overrides config)
+_env_port = os.environ.get("PORT") or os.environ.get("RAILWAY_PORT")
+if _env_port:
+    try:
+        _p = int(_env_port)
+        SETTINGS["port"] = _p
+        SETTINGS["http_ports"] = [_p]
+        SETTINGS["game_port"] = _p
+    except ValueError:
+        pass
+# Ensure single port list
+if not SETTINGS.get("http_ports"):
+    SETTINGS["http_ports"] = [int(SETTINGS.get("port") or SETTINGS.get("game_port") or 9933)]
+elif len(SETTINGS["http_ports"]) > 1 and _env_port:
+    SETTINGS["http_ports"] = [int(_env_port)]
+
+# Extra Railway / env overrides
+if os.environ.get("MAX_PLAYERS"):
+    try:
+        SETTINGS["max_players"] = int(os.environ["MAX_PLAYERS"])
+    except ValueError:
+        pass
+if os.environ.get("LOG_LEVEL"):
+    SETTINGS["log_level"] = os.environ["LOG_LEVEL"].lower()
+if os.environ.get("SERVER_ID"):
+    try:
+        SETTINGS["server_id"] = int(os.environ["SERVER_ID"])
+    except ValueError:
+        pass
+if os.environ.get("SERVER_NAME"):
+    SETTINGS["server_name"] = os.environ["SERVER_NAME"]
+if os.environ.get("PUBLIC_HOST"):
+    SETTINGS["server_ip"] = os.environ["PUBLIC_HOST"]
+    SETTINGS["resolved_server_ip"] = os.environ["PUBLIC_HOST"]
+
 FILES_DIR = locate_child(BASE_DIR, str(SETTINGS.get('files_folder') or 'Files'), True)
 FILES_DIR.mkdir(parents=True, exist_ok=True)
 DATA_DIR = locate_child(BASE_DIR, str(SETTINGS.get('data_dir') or 'Data'), True)
@@ -738,7 +782,7 @@ async def sfs_websocket(websocket: WebSocket):
     else:
         _active_connections += 1
         current = _active_connections
-    logger.info('websocket connected (%s/%s)', current, max_players or 'unlimited')
+    logger.warning('websocket connected (%s/%s)', current, max_players or 'unlimited')
     try:
         while True:
             _a = await websocket.receive()
@@ -752,7 +796,7 @@ async def sfs_websocket(websocket: WebSocket):
                 continue
             if _frame is None or _frame.command == 'alive':
                 continue
-            logger.info('IN %s params=%.500r', _frame.command, _frame.params)
+            logger.debug('IN %s params=%.500r', _frame.command, _frame.params)
             try:
                 _results = msm_handlers.handle_command(_frame.command, _frame.params)
             except Exception as _err:
@@ -762,13 +806,13 @@ async def sfs_websocket(websocket: WebSocket):
                 if isinstance(_resp_payload, (dict, list)):
                     msm_playerdata.coerce_wire_types(_resp_payload)
                 await websocket.send_bytes(msm_protocol.build_raw_frame(_resp_cmd, _resp_payload))
-                logger.info('%s -> %s payload=%.800r', _frame.command, _resp_cmd, _resp_payload)
+                logger.debug('%s -> %s payload=%.800r', _frame.command, _resp_cmd, _resp_payload)
             if _frame.command == 'USER_LOGIN':
                 for _boot_cmd, _boot_payload in msm_handlers.login_bootstrap_frames():
                     if isinstance(_boot_payload, (dict, list)):
                         msm_playerdata.coerce_wire_types(_boot_payload)
                     await websocket.send_bytes(msm_protocol.build_raw_frame(_boot_cmd, _boot_payload))
-                    logger.info('login -> %s', _boot_cmd)
+                    logger.debug('login -> %s', _boot_cmd)
     except WebSocketDisconnect:
         pass
     except Exception as _f:
@@ -781,7 +825,7 @@ async def sfs_websocket(websocket: WebSocket):
         else:
             _active_connections = max(0, _active_connections - 1)
             current = _active_connections
-        logger.info('websocket disconnected (%s/%s)', current, max_players or 'unlimited')
+        logger.warning('websocket disconnected (%s/%s)', current, max_players or 'unlimited')
 
 for route in ['/auth.php', '/auth.php/']:
     app.add_api_route(route, legacy_auth_php, methods=['GET', 'POST'])
@@ -825,10 +869,43 @@ app.add_api_route('/db/db_island', db_db_island, methods=['GET', 'POST'])
 app.add_api_route('/db/db_monster', db_db_monster, methods=['GET', 'POST'])
 app.add_api_route('/{path:path}', catch_all, methods=['GET', 'POST', 'PUT', 'DELETE'])
 
+def preload_all_db():
+    """Load every JSON in Data/ into memory once at startup (huge win under load)."""
+    if not SETTINGS.get("preload_db", True):
+        return
+    if msm_store.db_dir is None:
+        return
+    root = Path(msm_store.db_dir)
+    if not root.is_dir():
+        return
+    count = 0
+    for p in root.glob("*.json"):
+        name = p.stem
+        try:
+            msm_store.load_db_json(name)
+            count += 1
+        except Exception as e:
+            logger.warning("preload %s failed: %s", name, e)
+    logger.warning("preloaded %s db files into memory", count)
+
+
 async def _serve_with_retry(host, port, log_level, max_attempts=10, delay=1.0):
     last_exc = None
     for attempt in range(1, max_attempts + 1):
-        config = uvicorn.Config(app, host=host, port=port, log_level=log_level)
+        # High-concurrency uvicorn config (single worker — websockets need one process)
+        config = uvicorn.Config(
+            app,
+            host=host,
+            port=port,
+            log_level=log_level,
+            loop="asyncio",
+            http="h11",
+            ws="websockets",
+            limit_concurrency=2000,
+            timeout_keep_alive=75,
+            access_log=False,
+            backlog=2048,
+        )
         server = uvicorn.Server(config)
         _UVICORN_SERVERS.append(server)
         try:
@@ -842,25 +919,40 @@ async def _serve_with_retry(host, port, log_level, max_attempts=10, delay=1.0):
                 _UVICORN_SERVERS.remove(server)
             if _SHUTDOWN_REQUESTED or attempt >= max_attempts:
                 raise
-            logger.warning('port %s bind failed (attempt %s/%s): %s; retrying', port, attempt, max_attempts, e)
+            logger.warning("port %s bind failed (attempt %s/%s): %s; retrying", port, attempt, max_attempts, e)
             await asyncio.sleep(delay)
     if last_exc:
         raise last_exc
 
+
 async def main():
     global _SHUTDOWN_REQUESTED
     _SHUTDOWN_REQUESTED = False
-    _tasks = []
     _UVICORN_SERVERS.clear()
-    host = str(SETTINGS.get('host', '127.0.0.1'))
-    log_level = str(SETTINGS.get('log_level', 'info')).lower()
-    for _b in SETTINGS.get('http_ports') or [80]:
-        _tasks.append(_serve_with_retry(host, int(_b), log_level))
+    host = str(SETTINGS.get("host", "0.0.0.0"))
+    log_level = str(SETTINGS.get("log_level", "warning")).lower()
+    # Single fixed port only
+    ports = SETTINGS.get("http_ports") or [SETTINGS.get("port") or SETTINGS.get("game_port") or 9933]
+    port = int(ports[0])
+    preload_all_db()
+    max_p = SETTINGS.get("max_players") or 0
+    logger.warning(
+        "MSM Private Server starting host=%s port=%s max_players=%s server_id=%s",
+        host, port, max_p or "unlimited", SETTINGS.get("server_id"),
+    )
     watchdog = asyncio.ensure_future(_force_exit_watchdog())
     try:
-        await asyncio.gather(*_tasks)
+        await _serve_with_retry(host, port, log_level)
     finally:
         watchdog.cancel()
         _UVICORN_SERVERS.clear()
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
+    # Prefer uvloop when available (faster event loop)
+    try:
+        import uvloop
+        uvloop.install()
+    except ImportError:
+        pass
     asyncio.run(main())

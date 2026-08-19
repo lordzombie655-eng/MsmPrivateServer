@@ -1,0 +1,14 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "python server.py"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[variables]
+# Optional: override defaults via Railway Variables panel
+# PORT is set automatically by Railway
+# MAX_PLAYERS=500
+# LOG_LEVEL=warning
+# SERVER_ID=1
