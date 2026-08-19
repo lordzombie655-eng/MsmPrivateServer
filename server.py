@@ -214,7 +214,7 @@ async def _force_exit_watchdog(delay=5.0):
         except Exception:
             pass
 app.add_middleware(CORSMiddleware, allow_origins=list(SETTINGS.get('cors_origins') or ['*']), allow_credentials=bool(SETTINGS.get('cors_credentials', False)), allow_methods=['*'], allow_headers=['*'])
-DEFAULT_ACCOUNT = {'username': 'Next Private Server', 'email': 'Nextstars@gmail.com', 'password': 'PrivateServerStudios', 'user_id': '00000001AB', 'user_game_id': 'NextPrivateServer', 'steam_id': '76561198000000001'}
+DEFAULT_ACCOUNT = {'username': 'Kairox Private Server', 'email': 'Nextstars@gmail.com', 'password': 'PrivateServerStudios', 'user_id': '00000001AB', 'user_game_id': 'NextPrivateServer', 'steam_id': '76561198000000001'}
 PUBLIC_CONTENT_PREFIX = '/MSM/GameAssets/'
 ZONE_NAME = 'MySingingMonsters'
 BLUEBOX_HTTP_PORT = 8282
@@ -376,24 +376,91 @@ def content_port():
     _a = SETTINGS.get('http_ports') or [80]
     return int(_a[0])
 
+def is_public_host(host: str) -> bool:
+    h = (host or "").lower().strip()
+    if not h or h in ("127.0.0.1", "localhost", "0.0.0.0"):
+        return False
+    if h.endswith(".onrender.com") or h.endswith(".up.railway.app") or h.endswith(".railway.app"):
+        return True
+    if "." in h and not h.replace(".", "").isdigit():
+        return True
+    return False
+
+
+def public_base_url():
+    """HTTPS base for cloud (Render/Railway) or http://host:port locally."""
+    if SETTINGS.get("content_url"):
+        base = str(SETTINGS["content_url"]).rstrip("/")
+        # strip path suffixes if any
+        for suf in (PUBLIC_CONTENT_PREFIX.rstrip("/"), "/MSM/GameAssets"):
+            if base.endswith(suf):
+                base = base[: -len(suf)].rstrip("/")
+        return base
+    host = server_ip()
+    if is_public_host(host):
+        return f"https://{host}"
+    port = content_port()
+    suffix = "" if port in (80, 443) else f":{port}"
+    return f"http://{host}{suffix}"
+
+
 def content_root():
-    if SETTINGS.get('content_url'):
-        return str(SETTINGS['content_url']).rstrip('/')
-    _a = content_port()
-    _b = '' if _a == 80 else f':{_a}'
-    return f'http://{server_ip()}{_b}{PUBLIC_CONTENT_PREFIX}'
+    if SETTINGS.get("content_url"):
+        return str(SETTINGS["content_url"]).rstrip("/")
+    return f"{public_base_url()}{PUBLIC_CONTENT_PREFIX}"
+
 
 def sfs_block():
-    _a = server_ip()
-    _b = int(SETTINGS.get('game_port', 9933))
-    _c = BLUEBOX_HTTP_PORT
-    _d = BLUEBOX_HTTPS_PORT
-    _e = '/BlueBox/BlueBox.do'
-    _f = f'ws://{_a}:{_c}/msm/socket'
-    _g = f'http://{_a}:{_c}{_e}'
-    _h = f'https://{_a}:{_d}{_e}'
-    _i = f'http|websocket|{_a}|{_c}'
-    return {'host': _a, 'ip': _a, 'address': _a, 'hostname': _a, 'serverAddress': _a, 'serverId': int(SETTINGS.get('server_id', 1)), 'server_id': int(SETTINGS.get('server_id', 1)), 'serverIp': _i, 'serverIP': _i, 'server_ip': _i, 'serverHost': _a, 'server_host': _a, 'port': _b, 'serverPort': _b, 'server_port': _b, 'socketPort': _b, 'socket_port': _b, 'tcpPort': _b, 'tcp_port': _b, 'tcpPortNumber': _b, 'sfsHost': _a, 'sfs_host': _a, 'sfsIp': _a, 'sfsIP': _a, 'sfs_ip': _a, 'sfsPort': _b, 'sfs_port': _b, 'tcp_host': _a, 'tcp_port': _b, 'zone': ZONE_NAME, 'zoneName': ZONE_NAME, 'zone_name': ZONE_NAME, 'sfs_zone': ZONE_NAME, 'protocol': 'websocket', 'transport': 'websocket', 'connection': 'websocket', 'connectionType': 'websocket', 'connection_type': 'websocket', 'socket': True, 'use_socket': True, 'useSocket': True, 'secure': False, 'ssl': False, 'tls': False, 'use_ssl': False, 'use_tls': False, 'useSSL': False, 'useTLS': False, 'websocket': True, 'webSocket': True, 'use_websocket': True, 'useWebSocket': True, 'websocketHost': _a, 'websocket_host': _a, 'webSocketHost': _a, 'wsHost': _a, 'ws_host': _a, 'websocketPort': _c, 'websocket_port': _c, 'webSocketPort': _c, 'wsPort': _c, 'ws_port': _c, 'websocketPath': '/msm/socket', 'websocket_path': '/msm/socket', 'websocketUrl': _f, 'websocket_url': _f, 'webSocketUrl': _f, 'wsUrl': _f, 'ws_url': _f, 'bluebox': False, 'blueBox': False, 'use_bluebox': False, 'useBlueBox': False, 'blueboxHost': _a, 'bluebox_host': _a, 'blueBoxHost': _a, 'blueBoxIpAddress': _a, 'blueboxPort': _c, 'bluebox_port': _c, 'blueBoxPort': _c, 'httpPort': _c, 'http_port': _c, 'httpsPort': _d, 'https_port': _d, 'blueboxUrl': _g, 'bluebox_url': _g, 'blueBoxUrl': _g, 'blueboxSslUrl': _h, 'bluebox_ssl_url': _h, 'blueBoxSslUrl': _h}
+    host = server_ip()
+    game_port = int(SETTINGS.get("game_port", 9933))
+    public = is_public_host(host)
+    path_bb = "/BlueBox/BlueBox.do"
+    path_ws = "/msm/socket"
+
+    if public:
+        # Cloud: single HTTPS port (443), WSS for websockets
+        http_port = 443
+        https_port = 443
+        ws_url = f"wss://{host}{path_ws}"
+        http_url = f"https://{host}{path_bb}"
+        https_url = http_url
+        server_ip_str = f"https|websocket|{host}|443"
+        secure = True
+    else:
+        http_port = BLUEBOX_HTTP_PORT
+        https_port = BLUEBOX_HTTPS_PORT
+        ws_url = f"ws://{host}:{http_port}{path_ws}"
+        http_url = f"http://{host}:{http_port}{path_bb}"
+        https_url = f"https://{host}:{https_port}{path_bb}"
+        server_ip_str = f"http|websocket|{host}|{http_port}"
+        secure = False
+
+    return {
+        "host": host, "ip": host, "address": host, "hostname": host, "serverAddress": host,
+        "serverId": int(SETTINGS.get("server_id", 1)), "server_id": int(SETTINGS.get("server_id", 1)),
+        "serverIp": server_ip_str, "serverIP": server_ip_str, "server_ip": server_ip_str,
+        "serverHost": host, "server_host": host,
+        "port": game_port, "serverPort": game_port, "server_port": game_port,
+        "socketPort": game_port, "socket_port": game_port, "tcpPort": game_port, "tcp_port": game_port, "tcpPortNumber": game_port,
+        "sfsHost": host, "sfs_host": host, "sfsIp": host, "sfsIP": host, "sfs_ip": host,
+        "sfsPort": game_port, "sfs_port": game_port, "tcp_host": host,
+        "zone": ZONE_NAME, "zoneName": ZONE_NAME, "zone_name": ZONE_NAME, "sfs_zone": ZONE_NAME,
+        "protocol": "websocket", "transport": "websocket", "connection": "websocket",
+        "connectionType": "websocket", "connection_type": "websocket",
+        "socket": True, "use_socket": True, "useSocket": True,
+        "secure": secure, "ssl": secure, "tls": secure, "use_ssl": secure, "use_tls": secure, "useSSL": secure, "useTLS": secure,
+        "websocket": True, "webSocket": True, "use_websocket": True, "useWebSocket": True,
+        "websocketHost": host, "websocket_host": host, "webSocketHost": host, "wsHost": host, "ws_host": host,
+        "websocketPort": http_port, "websocket_port": http_port, "webSocketPort": http_port, "wsPort": http_port, "ws_port": http_port,
+        "websocketPath": path_ws, "websocket_path": path_ws,
+        "websocketUrl": ws_url, "websocket_url": ws_url, "webSocketUrl": ws_url, "wsUrl": ws_url, "ws_url": ws_url,
+        "bluebox": False, "blueBox": False, "use_bluebox": False, "useBlueBox": False,
+        "blueboxHost": host, "bluebox_host": host, "blueBoxHost": host, "blueBoxIpAddress": host,
+        "blueboxPort": http_port, "bluebox_port": http_port, "blueBoxPort": http_port,
+        "httpPort": http_port, "http_port": http_port, "httpsPort": https_port, "https_port": https_port,
+        "blueboxUrl": http_url, "bluebox_url": http_url, "blueBoxUrl": http_url,
+        "blueboxSslUrl": https_url, "bluebox_ssl_url": https_url, "blueBoxSslUrl": https_url,
+    }
 
 def account_entry(account):
     return {'type': 'email', 'username': account['username'], 'userName': account['username'], 'email': account['email'], 'can_bind_to': True, 'can_create': True, 'auto_create': False}
