@@ -3,6 +3,7 @@
   "port": 9933,
   "http_ports": [9933],
   "server_ip": "auto",
+  "public_host": "",
   "game_port": 9933,
   "server_id": 1,
   "max_players": 500,

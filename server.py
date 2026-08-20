@@ -68,13 +68,42 @@ def save_json(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding='utf-8')
 
+def _clean_host(v: str) -> str:
+    if not v:
+        return ""
+    v = str(v).strip()
+    v = v.replace("https://", "").replace("http://", "").replace("wss://", "").replace("ws://", "")
+    v = v.split("/")[0].strip()
+    # drop accidental port for cloud hosts (Render/Railway public is always 443)
+    if ":" in v:
+        host_part, port_part = v.rsplit(":", 1)
+        if port_part.isdigit() and host_part and not host_part.replace(".", "").isdigit():
+            # keep non-standard ports only for pure IPs; for domains drop 80/443/8080
+            if port_part in ("80", "443", "8080", "10000") or host_part.endswith((".onrender.com", ".up.railway.app", ".railway.app")):
+                v = host_part
+    return v.strip()
+
+
 def lan_ip():
-    """Best-effort public / bind host for Railway and local."""
-    for key in ("PUBLIC_HOST", "RAILWAY_PUBLIC_DOMAIN", "RAILWAY_STATIC_URL"):
-        v = os.environ.get(key)
-        if v:
-            return v.replace("https://", "").replace("http://", "").split("/")[0]
-    # Railway internal hostname not useful for clients; prefer localhost fallback
+    """Best-effort public host for Render / Railway / local."""
+    for key in (
+        "PUBLIC_HOST",
+        "RENDER_EXTERNAL_HOSTNAME",
+        "RAILWAY_PUBLIC_DOMAIN",
+        "RAILWAY_STATIC_URL",
+        "RENDER_EXTERNAL_URL",
+    ):
+        v = _clean_host(os.environ.get(key) or "")
+        if v and v not in ("127.0.0.1", "localhost", "0.0.0.0"):
+            return v
+    # Config.json override (SETTINGS may not exist at first import)
+    try:
+        cfg = SETTINGS  # type: ignore[name-defined]
+    except NameError:
+        cfg = {}
+    cfg_host = _clean_host(str(cfg.get("public_host") or cfg.get("server_ip") or ""))
+    if cfg_host and cfg_host not in ("auto", "127.0.0.1", "localhost", "0.0.0.0"):
+        return cfg_host
     return "127.0.0.1"
 
 def config():
@@ -150,7 +179,12 @@ if os.environ.get("SERVER_ID"):
         pass
 if os.environ.get("SERVER_NAME"):
     SETTINGS["server_name"] = os.environ["SERVER_NAME"]
-if os.environ.get("PUBLIC_HOST"):
+# Always prefer cloud public hostname when present
+_pub = lan_ip()
+if _pub and _pub not in ("127.0.0.1", "localhost", "0.0.0.0"):
+    SETTINGS["server_ip"] = _pub
+    SETTINGS["resolved_server_ip"] = _pub
+elif os.environ.get("PUBLIC_HOST"):
     SETTINGS["server_ip"] = os.environ["PUBLIC_HOST"]
     SETTINGS["resolved_server_ip"] = os.environ["PUBLIC_HOST"]
 
@@ -214,7 +248,7 @@ async def _force_exit_watchdog(delay=5.0):
         except Exception:
             pass
 app.add_middleware(CORSMiddleware, allow_origins=list(SETTINGS.get('cors_origins') or ['*']), allow_credentials=bool(SETTINGS.get('cors_credentials', False)), allow_methods=['*'], allow_headers=['*'])
-DEFAULT_ACCOUNT = {'username': 'Kairox Private Server', 'email': 'Nextstars@gmail.com', 'password': 'PrivateServerStudios', 'user_id': '00000001AB', 'user_game_id': 'NextPrivateServer', 'steam_id': '76561198000000001'}
+DEFAULT_ACCOUNT = {'username': 'Next Private Server', 'email': 'Nextstars@gmail.com', 'password': 'PrivateServerStudios', 'user_id': '00000001AB', 'user_game_id': 'NextPrivateServer', 'steam_id': '76561198000000001'}
 PUBLIC_CONTENT_PREFIX = '/MSM/GameAssets/'
 ZONE_NAME = 'MySingingMonsters'
 BLUEBOX_HTTP_PORT = 8282
@@ -367,7 +401,12 @@ async def params(request):
     return _a
 
 def server_ip():
-    return str(SETTINGS.get('resolved_server_ip') or SETTINGS.get('server_ip') or '127.0.0.1')
+    # Prefer live env (Render/Railway) every request so PUBLIC_HOST works without restart races
+    live = lan_ip()
+    if live and live not in ("127.0.0.1", "localhost", "0.0.0.0"):
+        SETTINGS["resolved_server_ip"] = live
+        return live
+    return str(SETTINGS.get("resolved_server_ip") or SETTINGS.get("server_ip") or "127.0.0.1")
 
 def content_port():
     _b = SETTINGS.get('content_port')
@@ -488,7 +527,25 @@ def token_payload(account, access_token):
 
 @app.api_route('/', methods=['GET', 'POST'])
 async def index():
-    return ok({'status': 'running'})
+    host = server_ip()
+    public = is_public_host(host)
+    return ok({
+        "status": "running",
+        "server_name": SETTINGS.get("server_name"),
+        "public_host": host,
+        "public": public,
+        "base_url": public_base_url(),
+        "content_url": content_root(),
+        "websocket_url": f"{'wss' if public else 'ws'}://{host}{'/msm/socket' if public else ':' + str(BLUEBOX_HTTP_PORT) + '/msm/socket'}",
+        "auth_php": f"{public_base_url()}/auth.php",
+        "max_players": SETTINGS.get("max_players"),
+        "hint": "Set PUBLIC_HOST or RENDER_EXTERNAL_HOSTNAME to your Render/Railway domain",
+    })
+
+
+@app.api_route('/status', methods=['GET', 'POST'])
+async def status_endpoint():
+    return await index()
 
 async def legacy_auth_php(request: Request):
     try:
@@ -499,7 +556,30 @@ async def legacy_auth_php(request: Request):
         _h = str(_a.get('username') or 'Nextstars')
         _d = str(_a.get('password') or 'PrivateServerStudios')
         _f = str(_a.get('user_game_id') or _h)
-        _b = {'ok': True, 'bbbId': _g, 'sessId': 'local-private-server-session', 'username': _h, 'password': _d, 'friends': [], 'serverIp': str(server_ip()), 'contentUrl': str(content_root()), 'sync': [], 'rs_verify': ''}
+        _host = server_ip()
+        _public = is_public_host(_host)
+        _sfs = sfs_block()
+        _b = {
+            'ok': True,
+            'bbbId': _g,
+            'sessId': 'local-private-server-session',
+            'username': _h,
+            'password': _d,
+            'friends': [],
+            'serverIp': _host,
+            'server_ip': _host,
+            'serverIP': _host,
+            'serverAddress': _host,
+            'host': _host,
+            'contentUrl': str(content_root()),
+            'content_url': str(content_root()),
+            'websocketUrl': _sfs.get('websocketUrl'),
+            'websocket_url': _sfs.get('websocketUrl'),
+            'blueboxUrl': _sfs.get('blueboxUrl'),
+            'secure': _public,
+            'sync': [],
+            'rs_verify': '',
+        }
         logger.info('legacy auth.php response %s', _b)
         _e = JSONResponse(_b)
         _e.headers['content-type'] = 'application/json; charset=utf-8'

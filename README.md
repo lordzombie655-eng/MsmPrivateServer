@@ -1,116 +1,67 @@
-# MSM Private Server — Railway + optimizado
+# MSM Private Server (Render / Railway)
 
-Servidor privado de **My Singing Monsters**, optimizado para muchas conexiones y listo para **Railway**.
+Servidor privado de My Singing Monsters optimizado para la nube.
 
-## Características
+## Importante: dominio público
 
-- **1 solo puerto fijo** (por defecto `9933`; en Railway usa el `$PORT` automático)
-- **Hasta 500 jugadores** por defecto (`max_players`, configurable)
-- Preload de todos los JSON de `Data/` en memoria al arrancar
-- Caché de jugadores en memoria
-- `orjson` + `uvloop` cuando están disponibles
-- Logging reducido (solo warning) para no saturar bajo carga
-- Uvicorn con `limit_concurrency=2000` y backlog alto
+En local el servidor usaría `127.0.0.1`. En **Render** o **Railway** debe usar tu dominio público.
 
----
+### Render
 
-## Desplegar en Railway (recomendado)
+1. Variables de entorno:
+   - `PUBLIC_HOST` = `tu-app.onrender.com`  (sin https://, sin puerto)
+   - `MAX_PLAYERS` = `500`
+   - `LOG_LEVEL` = `warning`
 
-### 1. Sube el código
+2. Render también define solo `RENDER_EXTERNAL_HOSTNAME` — el servidor la detecta.
 
-Opción A — desde GitHub:
-1. Crea un repo y sube **todo** el contenido de esta carpeta (`server.py`, `Data/`, `requirements.txt`, etc.).
-2. En [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo**.
+3. Build / Start:
+   ```
+   Build:  pip install -r requirements.txt
+   Start:  python server.py
+   ```
 
-Opción B — CLI:
-```bash
-npm i -g @railway/cli
-railway login
-railway init
-railway up
+### Railway
+
+- `PUBLIC_HOST` = `tu-app.up.railway.app`
+- o usa `RAILWAY_PUBLIC_DOMAIN` (automático)
+
+**Nunca** pongas `:8080` ni `:9933` en el dominio público. HTTPS/WSS van por el **443** del proveedor.
+
+## Comprobar que ya no es local
+
+Abre en el navegador:
+
+```
+https://TU-DOMINIO/
+https://TU-DOMINIO/status
+https://TU-DOMINIO/auth.php
 ```
 
-### 2. Configuración en Railway
+Debe verse algo como:
 
-Railway asigna el puerto con la variable **`PORT`**. El servidor la detecta solo y escucha ahí (un solo puerto).
-
-Variables opcionales (Settings → Variables):
-
-| Variable        | Descripción                     | Ejemplo        |
-|-----------------|---------------------------------|----------------|
-| `MAX_PLAYERS`   | Límite de conexiones simultáneas| `500`          |
-| `LOG_LEVEL`     | `warning` / `info` / `debug`    | `warning`      |
-| `SERVER_ID`     | ID del servidor                 | `1`            |
-| `SERVER_NAME`   | Nombre visible                  | `Mi MSM`       |
-| `PUBLIC_HOST`   | Dominio público (sin https://)  | `xxx.up.railway.app` |
-
-### 3. Generar dominio público
-
-En el servicio → **Settings** → **Networking** → **Generate Domain**.
-
-Copia el dominio (ej: `msm-production-xxxx.up.railway.app`).
-
-### 4. Cliente / APK
-
-El cliente debe apuntar al dominio de Railway (HTTP + WebSocket en el mismo host/puerto que Railway expone).  
-Railway termina TLS en el edge; el contenedor recibe HTTP en `$PORT`.
-
----
-
-## Ejecutar en local
-
-```bash
-pip install -r requirements.txt
-python server.py
-```
-
-Puerto fijo por defecto: **9933**.
-
-Cambia en `Config.json`:
 ```json
-{
-  "port": 9933,
-  "http_ports": [9933],
-  "game_port": 9933,
-  "max_players": 500,
-  "log_level": "warning"
-}
+"public_host": "tu-app.onrender.com",
+"public": true,
+"base_url": "https://tu-app.onrender.com",
+"serverIp": "tu-app.onrender.com"
 ```
 
----
+Si `serverIp` es `127.0.0.1`, falta `PUBLIC_HOST` o no se redeployó.
 
-## Optimizaciones aplicadas
-
-1. **Un solo puerto** — más simple y compatible con Railway.
-2. **Preload de DB** — todos los JSON de `Data/` en RAM al inicio.
-3. **Caché de jugadores** — menos lecturas de disco.
-4. **orjson** — serialización JSON más rápida.
-5. **uvloop** — event loop más rápido (Linux).
-6. **Logging en warning** — menos I/O bajo carga.
-7. **limit_concurrency=2000** + backlog alto en Uvicorn.
-8. **max_players=500** por defecto (sube o baja con la variable `MAX_PLAYERS`).
-
-Si necesitas aún más capacidad: sube el plan de Railway (más RAM/CPU) y aumenta `MAX_PLAYERS`.
-
----
-
-## Estructura
+## Cliente (APK de private server)
 
 ```
-├── server.py           # Entrada principal
-├── Config.json         # Config local
-├── requirements.txt    # Dependencias
-├── Procfile            # Railway start
-├── railway.toml
-├── Data/               # Todos los JSON del juego
-├── players/            # Datos de jugadores
-└── msm_*.py            # Módulos del juego
+BBB_AUTH_SERVER=https://tu-app.onrender.com
+BBB_AUTH2_SERVER=https://tu-app.onrender.com
 ```
 
-## Requisitos
+Sin puerto.
 
-Python 3.10+
+## Ejemplo con tu Render actual
 
 ```
-fastapi, uvicorn[standard], websockets, pycryptodome, orjson, uvloop
+PUBLIC_HOST=msm-private-server-9e32.onrender.com
+BBB_AUTH_SERVER=https://msm-private-server-9e32.onrender.com
+BBB_AUTH2_SERVER=https://msm-private-server-9e32.onrender.com
 ```
